@@ -8,7 +8,11 @@
       d:DesignHeight="450" d:DesignWidth="800"
       Title="SubsPage">
 
-    <Grid>
-        
+    <Grid Margin="32">
+        <TextBlock
+            Text="Subscriptions"
+            Style="{DynamicResource HeaderTextBlockStyle}"
+            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+        />
     </Grid>
 </Page>

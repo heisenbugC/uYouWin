@@ -4,9 +4,133 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:uYouWin"
+        xmlns:ui="http://schemas.modernwpf.com/2019"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="uYouWin" Height="768" Width="1024"
+        MinHeight="600" MinWidth="800"
+        ui:WindowHelper.UseModernWindowStyle="True">
+
     <Grid>
-        
+
+        <!-- Main Component Space Partition -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="88"/>
+        </Grid.RowDefinitions>
+
+        <!-- Navigation View & Associated Active Page-->
+        <ui:NavigationView
+            x:Name="NavigationView"
+            IsSettingsVisible="True"
+            SelectionChanged="NavigationView_SelectionChanged">
+
+            <ui:NavigationView.MenuItems>
+                <ui:NavigationViewItem
+                    Content="Home"
+                    Icon="Home"
+                    Tag="Home" />
+
+                <ui:NavigationViewItem
+                    Content="Subscriptions"
+                    Tag="Subscriptions">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xED0E;" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+
+                <ui:NavigationViewItem
+                    Content="History"
+                    Tag="History">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE81C;" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+
+                <ui:NavigationViewItem
+                    Content="Playlists"
+                    Icon="List"
+                    Tag="Playlists" />
+
+                <ui:NavigationViewItem
+                    Content="Library"
+                    Icon="Library"
+                    Tag="Library" />
+
+            </ui:NavigationView.MenuItems>
+
+            <ui:NavigationView.Content>
+                <Frame
+                    x:Name="ContentFrame"
+                    NavigationUIVisibility="Hidden"/>
+            </ui:NavigationView.Content>
+
+        </ui:NavigationView>
+
+        <Border 
+            Grid.Row="1" 
+            BorderThickness="0,1,0,0"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseHighBrush}"
+            Background="{DynamicResource SystemControlChromeLowAcrylicWindowMediumBrush}">
+
+            <!-- player content -->
+
+            <Grid Margin="16,4">
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="4" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <ProgressBar
+                    Grid.Row="0"
+                    Maximum="100"
+                    Minimum="0"
+                    Value="35" />
+
+                <Grid
+                    Grid.Row="1"
+                    Margin="0,4,0,0">
+
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button Width="48" Height="48" VerticalAlignment="Center">
+                        <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE768;" />
+                    </Button>
+
+                    <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center">
+                        <TextBlock 
+                            Text="Nothing Playing" 
+                            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+
+                        <TextBlock
+                            Text="Select a video to start playback"
+                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                    </StackPanel>
+
+                    <StackPanel 
+                        Grid.Column="2" 
+                        Orientation="Horizontal" 
+                        VerticalAlignment="Center">
+
+                        <Button
+                            Width="48"
+                            Height="48">
+                            <!-- This icon should be dynamic based on the volume level -->
+                            <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE995;" />
+                        </Button>
+
+                        <Button
+                            Width="48"
+                            Height="48">
+                            <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE712;" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
     </Grid>
 </Window>
