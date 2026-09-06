@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace uYouWin.Services.Playback
@@ -14,12 +12,22 @@ namespace uYouWin.Services.Playback
     /// </summary>
     internal interface VideoPlayerInterface
     {
-        void Play();
+        Task OpenAsync(
+            Uri uri,
+            CancellationToken cancellationToken);
+
+        Task PlayAsync();
+
         void Pause();
+
         void Stop();
-        void Seek(TimeSpan position);
-        TimeSpan Position { get; }
-        TimeSpan Duration { get; }
+
+        void Seek(double position);
+
+        double Position { get; }
+
+        double Duration { get; }
+
         bool IsPlaying { get; }
     }
 }

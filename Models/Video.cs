@@ -17,5 +17,7 @@ namespace uYouWin.Models
         public DateTime PublishedAt { get; set; }
         public TimeSpan Duration { get; set; }
         public string WebUrl { get; set; }
+        public string YtUrl { get; set; }
+        public List<Thumbnail> Thumbnails { get; set; }
     }
 }

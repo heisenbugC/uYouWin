@@ -19,7 +19,15 @@
             <TextBlock
                 Text="Welcome to use uYouWin!"
                 Margin="0,12,0,0"
+                Style="{DynamicResource TextBlockStyle}"
+                Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
             />
+
+            <Button
+                Width="120"
+                Height="36"
+                Content="Test Connection"
+                Click="TestInvidious_Click" />
         </StackPanel>
     </Grid>
 </Page>
