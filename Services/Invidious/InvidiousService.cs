@@ -67,7 +67,9 @@ namespace uYouWin.Services.Invidious
                 ChannelId = (string)item["authorId"],
                 ChannelTitle = (string)item["author"],
                 PublishedAt = DateTimeOffset.FromUnixTimeSeconds((long)item["published"]).DateTime,
-                Duration = TimeSpan.FromSeconds((int)item["lengthSeconds"]),
+                Duration = item["lengthSeconds"] == null
+                    ? 0d
+                    : Convert.ToDouble(item["lengthSeconds"]),
                 ThumbnailUrl = (string)item["videoThumbnails"]?[0]?["url"],
                 WebUrl = $"https://www.youtube.com/watch?v={(string)item["videoId"]}"
             };

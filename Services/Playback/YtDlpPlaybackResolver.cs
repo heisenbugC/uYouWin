@@ -1,23 +1,26 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using uYouWin.Models;
 
 namespace uYouWin.Services.Playback
 {
-    internal class YtDlpPlaybackResolver
+    public sealed class YtDlpPlaybackResolver : PlaybackResolverInterface
     {
         private readonly string _ytDlpPath;
 
-        internal YtDlpPlaybackResolver(string ytDlpPath)
+        public YtDlpPlaybackResolver(string ytDlpPath)
         {
             if (string.IsNullOrWhiteSpace(ytDlpPath))
-            {
                 throw new ArgumentException(
-                    "Path to yt-dlp cannot be null or whitespace.", nameof(ytDlpPath));
-            }
+                    "yt-dlp path cannot be empty.",
+                    nameof(ytDlpPath));
+
             _ytDlpPath = ytDlpPath;
         }
 
@@ -32,126 +35,313 @@ namespace uYouWin.Services.Playback
             if (settings == null)
                 throw new ArgumentNullException(nameof(settings));
 
-            string url =
-                "https://www.youtube.com/watch?v=" +
-                Uri.EscapeDataString(video.Id);
+            if (string.IsNullOrWhiteSpace(video.YtUrl))
+                throw new ArgumentException(
+                    "Video does not have a YouTube URL.",
+                    nameof(video));
 
-            string formatSelector =
-                "best[ext=mp4]" +
-                "[height<=" + settings.MaxVideoHeight + "]" +
-                "[vcodec^=avc1]" +
-                "[acodec^=mp4a]";
+            string json = await RunYtDlpAsync(
+                video.YtUrl,
+                cancellationToken);
 
-            string arguments =
-                "--no-playlist " +
-                "--no-warnings " +
-                "--get-url " +
-                "--format " +
-                QuoteArgument(formatSelector) +
-                " " +
-                QuoteArgument(url);
+            YtDlpVideoInfo info;
 
-            string output =
-                await RunProcessAsync(
-                    arguments,
-                    cancellationToken);
-
-            string resolvedUrl = output.Trim();
-
-            if (string.IsNullOrWhiteSpace(resolvedUrl))
+            try
+            {
+                info = JsonConvert.DeserializeObject<YtDlpVideoInfo>(json);
+            }
+            catch (JsonException ex)
+            {
                 throw new InvalidOperationException(
-                    "yt-dlp did not return a playback URL.");
+                    "yt-dlp returned invalid JSON.",
+                    ex);
+            }
+
+            if (info == null)
+                throw new InvalidOperationException(
+                    "yt-dlp returned no video information.");
+
+            YtDlpFormat videoFormat =
+                SelectVideoFormat(info, settings);
+
+            YtDlpFormat audioFormat =
+                SelectAudioFormat(info, settings);
+
+            if (videoFormat == null)
+            {
+                throw new InvalidOperationException(
+                    "No compatible H.264 video format is available.");
+            }
+
+            if (audioFormat == null)
+            {
+                throw new InvalidOperationException(
+                    "No compatible AAC audio format is available.");
+            }
 
             return new PlaybackResource
             {
-                Url = resolvedUrl,
-                Container = "mp4",
-                VideoCodec = settings.VideoCodec,
-                AudioCodec = settings.AudioCodec,
-                Height = settings.MaxVideoHeight,
-                IsMuxed = true
+                Type = PlaybackResourceType.DirectStreams,
+
+                VideoUrl = videoFormat.Url,
+                AudioUrl = audioFormat.Url,
+
+                VideoFormatId = videoFormat.FormatID,
+                AudioFormatId = audioFormat.FormatID,
+
+                VideoCodec = videoFormat.Vcodec,
+                AudioCodec = audioFormat.Acodec,
+
+                VideoContainer = videoFormat.Container,
+                AudioContainer = audioFormat.Container,
+
+                Width = videoFormat.Width ?? 0,
+                Height = videoFormat.Height ?? 0,
+                Fps = videoFormat.Fps ?? 0,
+
+                AudioBitrateKbps = audioFormat.Abr ?? 0,
+                AudioSampleRate = audioFormat.Asr ?? 0,
+                AudioChannels = audioFormat.AudioChannels ?? 0,
+
+                Language = audioFormat.Language,
+
+                DurationSeconds = info.Duration ?? 0
             };
         }
 
-        private async Task<string> RunProcessAsync(
-            string arguments,
+        private static YtDlpFormat SelectVideoFormat(
+            YtDlpVideoInfo info,
+            PlaybackSettings settings)
+        {
+            return info.Formats
+                .Where(IsUsableH264Video)
+                .Where(f =>
+                    f.Height.HasValue &&
+                    f.Height.Value > 0 &&
+                    f.Height.Value <= settings.MaxVideoHeight)
+                .OrderByDescending(f => f.Height.Value)
+                .ThenByDescending(f => f.Fps ?? 0)
+                .ThenByDescending(f => f.Tbr ?? 0)
+                .FirstOrDefault();
+        }
+
+        private static YtDlpFormat SelectAudioFormat(
+            YtDlpVideoInfo info,
+            PlaybackSettings settings)
+        {
+            var candidates = info.Formats
+                .Where(IsUsableAacAudio)
+                .ToList();
+
+            if (candidates.Count == 0)
+                return null;
+
+            /*
+             * Prefer the original/default language.
+             *
+             * yt-dlp generally gives language_preference > 0 to
+             * preferred/original tracks.
+             */
+            candidates = candidates
+                .OrderByDescending(f => f.LanguagePreference ?? 0)
+                .ThenBy(f =>
+                {
+                    double abr = f.Abr ?? 0;
+                    return Math.Abs(
+                        abr - settings.TargetAudioBitrateKbps);
+                })
+                .ThenByDescending(f => f.Abr ?? 0)
+                .ToList();
+
+            return candidates[0];
+        }
+
+        private static bool IsUsableH264Video(
+            YtDlpFormat format)
+        {
+            if (format == null)
+                return false;
+
+            if (string.IsNullOrWhiteSpace(format.Url))
+                return false;
+
+            if (string.IsNullOrWhiteSpace(format.Vcodec))
+                return false;
+
+            if (!format.Vcodec.StartsWith(
+                    "avc1",
+                    StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (!string.Equals(
+                    format.Acodec,
+                    "none",
+                    StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (!string.Equals(
+                    format.Ext,
+                    "mp4",
+                    StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (!string.Equals(
+                    format.Protocol,
+                    "https",
+                    StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (format.HasDrm == true)
+                return false;
+
+            return true;
+        }
+
+        private static bool IsUsableAacAudio(
+            YtDlpFormat format)
+        {
+            if (format == null)
+                return false;
+
+            if (string.IsNullOrWhiteSpace(format.Url))
+                return false;
+
+            if (!string.Equals(
+                    format.Vcodec,
+                    "none",
+                    StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (string.IsNullOrWhiteSpace(format.Acodec))
+                return false;
+
+            if (!format.Acodec.StartsWith(
+                    "mp4a",
+                    StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (!string.Equals(
+                    format.Ext,
+                    "m4a",
+                    StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (!string.Equals(
+                    format.Protocol,
+                    "https",
+                    StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (format.HasDrm == true)
+                return false;
+
+            return true;
+        }
+
+        private async Task<string> RunYtDlpAsync(
+            string url,
             CancellationToken cancellationToken)
         {
+            if (!File.Exists(_ytDlpPath))
+            {
+                throw new FileNotFoundException(
+                    "yt-dlp executable was not found.",
+                    _ytDlpPath);
+            }
+
+            string escapedUrl =
+                url.Replace("\\", "\\\\")
+                   .Replace("\"", "\\\"");
+
             var startInfo = new ProcessStartInfo
             {
                 FileName = _ytDlpPath,
-                Arguments = arguments,
+
+                Arguments =
+                    "-j --no-playlist --no-warnings \"" +
+                    escapedUrl +
+                    "\"",
+
                 UseShellExecute = false,
+                CreateNoWindow = true,
+
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                CreateNoWindow = true
+
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8
             };
 
             using (var process = new Process())
             {
                 process.StartInfo = startInfo;
 
-                var stdout = new StringBuilder();
-                var stderr = new StringBuilder();
-
-                process.OutputDataReceived +=
-                    (sender, e) =>
-                    {
-                        if (e.Data != null)
-                            stdout.AppendLine(e.Data);
-                    };
-
-                process.ErrorDataReceived +=
-                    (sender, e) =>
-                    {
-                        if (e.Data != null)
-                            stderr.AppendLine(e.Data);
-                    };
-
                 if (!process.Start())
+                {
                     throw new InvalidOperationException(
                         "Failed to start yt-dlp.");
+                }
 
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
+                Task<string> outputTask =
+                    process.StandardOutput.ReadToEndAsync();
 
-                using (
-                    cancellationToken.Register(
-                        () =>
-                        {
-                            try
-                            {
-                                if (!process.HasExited)
-                                    process.Kill();
-                            }
-                            catch
-                            {
-                                // Process may already have exited.
-                            }
-                        }))
+                Task<string> errorTask =
+                    process.StandardError.ReadToEndAsync();
+
+                try
                 {
-                    await Task.Run(
-                        () => process.WaitForExit(),
+                    await WaitForExitAsync(
+                        process,
                         cancellationToken);
                 }
+                catch
+                {
+                    try
+                    {
+                        if (!process.HasExited)
+                            process.Kill();
+                    }
+                    catch
+                    {
+                    }
+
+                    throw;
+                }
+
+                string output = await outputTask;
+                string error = await errorTask;
 
                 if (process.ExitCode != 0)
                 {
                     throw new InvalidOperationException(
-                        "yt-dlp failed: " + stderr);
+                        "yt-dlp failed with exit code " +
+                        process.ExitCode +
+                        ": " +
+                        error);
                 }
 
-                return stdout.ToString();
+                if (string.IsNullOrWhiteSpace(output))
+                {
+                    throw new InvalidOperationException(
+                        "yt-dlp returned empty output.");
+                }
+
+                return output.Trim();
             }
         }
 
-        private string QuoteArgument(string value)
+        private static async Task WaitForExitAsync(
+            Process process,
+            CancellationToken cancellationToken)
         {
-            return "\"" +
-                   value.Replace("\\", "\\\\")
-                        .Replace("\"", "\\\"") +
-                   "\"";
+            while (!process.HasExited)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                await Task.Delay(
+                    50,
+                    cancellationToken);
+            }
         }
     }
 }
-

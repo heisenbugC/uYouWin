@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace uYouWin.Models
 {
-    internal class Video
+    public class Video
     {
         public string Id { get; set; }
         public string Title { get; set; }
@@ -15,9 +15,9 @@ namespace uYouWin.Models
         public string ChannelTitle { get; set; }
         public string ThumbnailUrl { get; set; }
         public DateTime PublishedAt { get; set; }
-        public TimeSpan Duration { get; set; }
+        public double Duration { get; set; } 
         public string WebUrl { get; set; }
         public string YtUrl { get; set; }
-        public List<Thumbnail> Thumbnails { get; set; }
+        // public List<Thumbnail> Thumbnails { get; set; }
     }
 }

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace uYouWin.Models
 {
-    internal class PlaybackSettings
+    public class PlaybackSettings
     {
         public int MaxVideoHeight { get; set; }
 

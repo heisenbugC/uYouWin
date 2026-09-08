@@ -4,10 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace uYouWin.Services.Archive
+namespace uYouWin.Services.Playback.Native
 {
-    internal class GoogleTakeoutImporter
+    internal class DirectCompositionNative
     {
-        
     }
 }

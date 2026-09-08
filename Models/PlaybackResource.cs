@@ -6,11 +6,25 @@ using System.Threading.Tasks;
 
 namespace uYouWin.Models
 {
-    internal class PlaybackResource
+    public enum PlaybackResourceType
     {
-        public string Url { get; set; }
+        DirectStreams,
+        DashManifest,
+        HlsManifest,
+        TemporaryFile
+    }
 
-        public string Container { get; set; }
+    public class PlaybackResource
+    {
+        public PlaybackResourceType Type { get; set; }
+
+        public string VideoUrl { get; set; }
+
+        public string AudioUrl { get; set; }
+
+        public string VideoContainer { get; set; }
+
+        public string AudioContainer { get; set; }
 
         public string VideoCodec { get; set; }
 
@@ -20,12 +34,20 @@ namespace uYouWin.Models
 
         public int Height { get; set; }
 
-        public int AudioBitrateKbps { get; set; }
+        public double Fps { get; set; }
+
+        public double AudioBitrateKbps { get; set; }
+
+        public int AudioSampleRate { get; set; }
+
+        public int AudioChannels { get; set; }
 
         public string VideoFormatId { get; set; }
 
         public string AudioFormatId { get; set; }
 
-        public bool IsMuxed { get; set; }
+        public string Language { get; set; }
+
+        public double DurationSeconds { get; set; }
     }
 }

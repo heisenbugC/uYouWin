@@ -24,10 +24,21 @@
             />
 
             <Button
-                Width="120"
+                Width="140"
                 Height="36"
+                Margin="24"
                 Content="Test Connection"
                 Click="TestInvidious_Click" />
+
+            <Button
+                x:Name="TestPlaybackButton"
+                Content="Test YouTube Playback"
+                Width="220"
+                Height="48"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Margin="24"
+                Click="TestPlaybackButton_Click" />
         </StackPanel>
     </Grid>
 </Page>

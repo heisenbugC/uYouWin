@@ -2,10 +2,11 @@
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using uYouWin.Models;
 
 namespace uYouWin.Services.Playback
 {
-    internal sealed class MediaFoundationPlayer : VideoPlayerInterface
+    public sealed class MediaFoundationPlayer : VideoPlayerInterface
     {
         private readonly IMFMediaEngine _engine;
         private readonly object _sync = new object();
@@ -19,7 +20,7 @@ namespace uYouWin.Services.Playback
                     "Windows Media Foundation requires Windows 8 or later.");
             }
 
-            NativeMethods.CoInitializeEx(IntPtr.Zero, 
+            NativeMethods.CoInitializeEx(IntPtr.Zero,
                 NativeMethods.COINIT_APARTMENTTHREADED);
 
             var startupHr = NativeMethods.MFStartup(NativeMethods.MF_API_VERSION, 0);
@@ -31,24 +32,50 @@ namespace uYouWin.Services.Playback
             _engine = CreateEngine();
         }
 
-        public Task OpenAsync(Uri uri, CancellationToken cancellationToken)
+        public Task OpenAsync(
+            PlaybackResource resource,
+            CancellationToken cancellationToken)
         {
-            if (uri == null)
-                throw new ArgumentNullException(nameof(uri));
+            if (resource == null)
+                throw new ArgumentNullException(nameof(resource));
 
             if (_disposed)
                 throw new ObjectDisposedException(nameof(MediaFoundationPlayer));
 
+            string sourceUrl = resource.VideoUrl;
+
+            if (string.IsNullOrWhiteSpace(sourceUrl))
+                sourceUrl = resource.AudioUrl;
+
+            if (string.IsNullOrWhiteSpace(sourceUrl))
+                throw new InvalidOperationException(
+                    "Playback resource does not contain a usable media URL.");
+
             lock (_sync)
             {
-                _engine.SetSource(uri.AbsoluteUri);
+                _engine.SetSource(sourceUrl);
                 _engine.Load();
             }
 
             return Task.CompletedTask;
         }
 
-        public Task PlayAsync()
+        public Task OpenAsync(Uri uri, CancellationToken cancellationToken)
+        {
+            if (uri == null)
+                throw new ArgumentNullException(nameof(uri));
+
+            return OpenAsync(
+                new PlaybackResource
+                {
+                    VideoUrl = uri.AbsoluteUri,
+                    AudioUrl = uri.AbsoluteUri,
+                    Type = PlaybackResourceType.DirectStreams
+                },
+                cancellationToken);
+        }
+
+        public void Play()
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(MediaFoundationPlayer));
@@ -57,8 +84,6 @@ namespace uYouWin.Services.Playback
             {
                 _engine.Play();
             }
-
-            return Task.CompletedTask;
         }
 
         public void Pause()
@@ -137,6 +162,14 @@ namespace uYouWin.Services.Playback
             }
         }
 
+        public object NativePlayer
+        {
+            get
+            {
+                return _engine;
+            }
+        }
+
         private static IMFMediaEngine CreateEngine()
         {
             var factory = CreateFactory();
@@ -152,9 +185,6 @@ namespace uYouWin.Services.Playback
 
         private static IMFMediaEngineClassFactory CreateFactory()
         {
-            // These GUID values must match the exact COM metadata in mfmediaengine.h.
-            // Keeping them explicit makes the native surface easy to replace with the
-            // Windows SDK's definitive values when the final binding is wired up.
             var clsid = new Guid("B22C3339-87F3-4059-A0C5-037AA9707EAF");
             var iid = typeof(IMFMediaEngineClassFactory).GUID;
 

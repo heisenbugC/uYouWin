@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using uYouWin.Models;
 
 namespace uYouWin.Services.Playback
 {
@@ -10,24 +11,27 @@ namespace uYouWin.Services.Playback
     /// This interface defines the common methods and properties that both services must implement,
     /// allowing the application to switch between different video players seamlessly.
     /// </summary>
-    internal interface VideoPlayerInterface
+    public interface VideoPlayerInterface : IDisposable
     {
         Task OpenAsync(
-            Uri uri,
+            PlaybackResource resource,
             CancellationToken cancellationToken);
 
-        Task PlayAsync();
+        void Play();
 
         void Pause();
 
         void Stop();
 
-        void Seek(double position);
+        void Seek(
+            double position);
 
         double Position { get; }
 
         double Duration { get; }
 
         bool IsPlaying { get; }
+
+        object NativePlayer { get; }
     }
 }

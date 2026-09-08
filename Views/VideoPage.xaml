@@ -4,11 +4,17 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:uYouWin.Views"
+      xmlns:controls="clr-namespace:Microsoft.Toolkit.Wpf.UI.Controls;assembly=Microsoft.Toolkit.Wpf.UI.Controls"
       mc:Ignorable="d" 
       d:DesignHeight="450" d:DesignWidth="800"
       Title="VideoPage">
 
     <Grid>
-        
+        <controls:MediaPlayerElement
+            x:Name="VideoPlayerElement"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            AreTransportControlsEnabled="False"
+            Stretch="Uniform" />
     </Grid>
 </Page>

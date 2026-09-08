@@ -26,7 +26,7 @@
     <UpdateIntervalUnits>Days</UpdateIntervalUnits>
     <UpdatePeriodically>false</UpdatePeriodically>
     <UpdateRequired>false</UpdateRequired>
-    <MapFileExtensions>true</MapFileExtensions>
+    <MapFileExtensions>false</MapFileExtensions>
     <TargetCulture>en-US</TargetCulture>
     <ProductName>uYouWin</ProductName>
     <PublisherName>Desmond</PublisherName>
@@ -69,7 +69,7 @@
     <ManifestKeyFile>uYouWin_TemporaryKey.pfx</ManifestKeyFile>
   </PropertyGroup>
   <PropertyGroup>
-    <GenerateManifests>true</GenerateManifests>
+    <GenerateManifests>false</GenerateManifests>
   </PropertyGroup>
   <PropertyGroup>
     <TargetZone>LocalIntranet</TargetZone>
@@ -116,15 +116,30 @@
     <Compile Include="Services\Archive\ArchiveImporterInterface.cs" />
     <Compile Include="Services\Archive\GoogleTakeoutImporter.cs" />
     <Compile Include="Services\Invidious\InvidiousClient.cs" />
+    <Compile Include="Services\Invidious\InvidiousException.cs" />
     <Compile Include="Services\Invidious\InvidiousInstanceManager.cs" />
     <Compile Include="Services\Invidious\InvidiousService.cs" />
     <Compile Include="Services\Invidious\InvidiousServiceInterface.cs" />
     <Compile Include="Services\Library\LibraryService.cs" />
     <Compile Include="Services\Library\LibraryServiceInterface.cs" />
+    <Compile Include="Services\Playback\Fmp4\Fmp4StreamReader.cs" />
+    <Compile Include="Services\Playback\Fmp4\Fmp4TrackParser.cs" />
+    <Compile Include="Services\Playback\Fmp4\Fmp4Types.cs" />
+    <Compile Include="Services\Playback\Fmp4\Mp4BinaryReader.cs" />
+    <Compile Include="Services\Playback\Fmp4\Mp4BoxParser.cs" />
     <Compile Include="Services\Playback\MediaFoundationPlayer.cs" />
+    <Compile Include="Services\Playback\MediaFoundationRuntime.cs" />
+    <Compile Include="Services\Playback\MediaPlayerVideoPlayer.cs" />
+    <Compile Include="Services\Playback\Native\DirectCompositionNative.cs" />
+    <Compile Include="Services\Playback\Native\MFMediaEngine.cs" />
+    <Compile Include="Services\Playback\Native\MFMediaEngineEx.cs" />
+    <Compile Include="Services\Playback\Native\MFNative.cs" />
     <Compile Include="Services\Playback\PlaybackResolverInterface.cs" />
     <Compile Include="Services\Playback\PlaybackService.cs" />
+    <Compile Include="Services\Playback\Streaming\HttpRangeReader.cs" />
     <Compile Include="Services\Playback\VideoPlayerInterface.cs" />
+    <Compile Include="Services\Playback\YouTubeMediaStreamSource.cs" />
+    <Compile Include="Services\Playback\YtDlpJsonModels.cs" />
     <Compile Include="Services\Playback\YtDlpPlaybackResolver.cs" />
     <Compile Include="Views\HistoryPage.xaml.cs">
       <DependentUpon>HistoryPage.xaml</DependentUpon>
@@ -225,6 +240,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Assets\yt-dlp\_internal\" />
     <Folder Include="Data\" />
     <Folder Include="Resources\" />
     <Folder Include="ViewModels\" />
@@ -236,6 +252,9 @@
     <Resource Include="Assets\icons\uYouWin.ico" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Toolkit.Wpf.UI.Controls">
+      <Version>6.1.2</Version>
+    </PackageReference>
     <PackageReference Include="Microsoft.Windows.SDK.Contracts">
       <Version>10.0.18362.2007</Version>
     </PackageReference>
@@ -261,7 +280,7 @@
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.8">
       <Visible>False</Visible>
-      <ProductName>Microsoft .NET Framework 4.8 %28x86 和 x64%29</ProductName>
+      <ProductName>Microsoft .NET Framework 4.8 %28x86 ??x64%29</ProductName>
       <Install>true</Install>
     </BootstrapperPackage>
     <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
@@ -272,6 +291,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include=".gitignore" />
+    <Content Include="Assets\yt-dlp\deno.exe"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+    <Content Include="Assets\yt-dlp\yt-dlp.exe"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+    <Content Include="Assets\yt-dlp\_internal\**\*.*"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
   </ItemGroup>
   <ItemGroup>
     <PublishFile Include=".gitignore">
