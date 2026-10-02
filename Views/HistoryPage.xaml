@@ -9,10 +9,33 @@
       Title="HistoryPage">
 
     <Grid Margin="32">
-        <TextBlock
-            Text="History"
-            Style="{DynamicResource HeaderTextBlockStyle}"
-            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-        />
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+            <TextBlock x:Name="HistoryTitle" Grid.Row="0" Text="History" FontSize="28" Margin="0,0,0,16"
+                       Visibility="Visible" HorizontalAlignment="Left"
+                       Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+            <TextBlock x:Name="StatusText" Grid.Row="1" TextWrapping="Wrap" />
+            <TabControl Grid.Row="2">
+                <TabItem Header="Watch history">
+                    <ListBox x:Name="WatchList" MouseDoubleClick="WatchList_MouseDoubleClick">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="8">
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding ChannelTitle}" />
+                                    <TextBlock Text="{Binding WatchedAt}" />
+                                    <local:AddToPlaylistButton />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </TabItem>
+                <TabItem Header="Search history">
+                    <ListBox x:Name="SearchList" DisplayMemberPath="Query" MouseDoubleClick="SearchList_MouseDoubleClick" />
+                </TabItem>
+            </TabControl>
     </Grid>
 </Page>

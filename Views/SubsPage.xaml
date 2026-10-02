@@ -6,13 +6,36 @@
       xmlns:local="clr-namespace:uYouWin.Views"
       mc:Ignorable="d" 
       d:DesignHeight="450" d:DesignWidth="800"
-      Title="SubsPage">
+      Title="Subscriptions"
+      Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"
+      Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}">
 
     <Grid Margin="32">
-        <TextBlock
-            Text="Subscriptions"
-            Style="{DynamicResource HeaderTextBlockStyle}"
-            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-        />
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+            <TextBlock x:Name="SubscriptionsTitle" Grid.Row="0" Text="Subscriptions" FontSize="28" Margin="0,0,0,16"
+                       Visibility="Visible" HorizontalAlignment="Left"
+                       Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+            <StackPanel Grid.Row="1" Orientation="Horizontal">
+                <Button Content="Open channel" Click="OpenChannel_Click" />
+                <Button Content="Unsubscribe" Margin="8,0" Click="Unsubscribe_Click" />
+            </StackPanel>
+            <TextBlock x:Name="StatusText" Grid.Row="2" TextWrapping="Wrap" Margin="0,8"
+                       Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+            <ListBox x:Name="SubscriptionsList" Grid.Row="3" Background="Transparent" BorderThickness="0"
+                     Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     MouseDoubleClick="OpenChannel_Click">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding ChannelName}" TextWrapping="Wrap" Margin="8"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
     </Grid>
 </Page>

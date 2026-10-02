@@ -30,6 +30,37 @@ namespace uYouWin.Services.Playback.Fmp4
 
         private long _nextScanOffset;
 
+        private readonly CancellationTokenSource _cts =
+            new CancellationTokenSource();
+
+        /*
+         * Fields supporting incremental (streaming) fragment scanning.
+         *
+         * Only a small initial window of fragments is scanned
+         * synchronously during InitializeAsync so playback can start
+         * quickly. The remaining fragments are scanned in the
+         * background on _backgroundScanTask while the reader is
+         * already producing samples for playback.
+         */
+        private const double InitialScanWindowSeconds = 8.0;
+
+        private readonly object _scanLock =
+            new object();
+
+        private TaskCompletionSource<bool>
+            _scanProgressSignal =
+                new TaskCompletionSource<bool>();
+
+        private Task _backgroundScanTask;
+
+        private bool _scanComplete;
+
+        private Exception _backgroundScanError;
+
+        private Mp4TopLevelBoxHeader _moovHeader;
+        private Fmp4TrackInfo _trexDefaults;
+        private long _mediaLength;
+
         public Fmp4TrackInfo TrackInfo { get; private set; }
 
         public IReadOnlyList<Fmp4Sample> Samples
@@ -66,7 +97,17 @@ namespace uYouWin.Services.Playback.Fmp4
                 await ReadInitializationAsync(
                     cancellationToken);
 
-            await ScanFragmentsAsync(
+            await PrepareFragmentScanAsync(
+                cancellationToken);
+
+            /*
+             * Scan just enough fragments to have a small playable
+             * window, then hand off the remainder of the scan to a
+             * background task so playback can begin without waiting
+             * for the entire remote file to be indexed.
+             */
+            await ScanFragmentsUntilAsync(
+                InitialScanWindowSeconds,
                 cancellationToken);
 
             if (_samples.Count == 0)
@@ -83,6 +124,38 @@ namespace uYouWin.Services.Playback.Fmp4
             Duration = lastEnd;
 
             _initialized = true;
+
+            if (!_scanComplete)
+            {
+                _backgroundScanTask =
+                    Task.Run(
+                        () => BackgroundScanAsync(_cts.Token));
+            }
+        }
+
+        private async Task BackgroundScanAsync(
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                await ScanFragmentsUntilAsync(
+                    double.MaxValue,
+                    cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                _backgroundScanError = ex;
+
+                lock (_scanLock)
+                {
+                    _scanComplete = true;
+
+                    _scanProgressSignal.TrySetResult(true);
+                }
+            }
         }
 
         public void SetTimelineOrigin(
@@ -96,6 +169,31 @@ namespace uYouWin.Services.Playback.Fmp4
         {
             return sample.Timestamp -
                    _timelineOrigin;
+        }
+
+        public async Task<Fmp4SeekResult> PrepareSeekAsync(
+            TimeSpan target,
+            CancellationToken cancellationToken)
+        {
+            if (_samples.Count == 0)
+                throw new InvalidOperationException(
+                    "Reader is not initialized.");
+
+            /*
+             * Ensure fragments up to (and a bit beyond) the seek target
+             * have been scanned before searching the sample index,
+             * since the background scan may not have reached that far
+             * yet when seeking forward.
+             */
+            while (!_scanComplete &&
+                   _samples[_samples.Count - 1].Timestamp < target)
+            {
+                await WaitForSamplesAsync(
+                    _samples.Count + 1,
+                    cancellationToken);
+            }
+
+            return PrepareSeek(target);
         }
 
         public Fmp4SeekResult PrepareSeek(
@@ -186,7 +284,17 @@ namespace uYouWin.Services.Playback.Fmp4
             try
             {
                 if (_currentSampleIndex >= _samples.Count)
-                    return null;
+                {
+                    if (_scanComplete)
+                        return null;
+
+                    await WaitForSamplesAsync(
+                        _currentSampleIndex + 1,
+                        cancellationToken);
+
+                    if (_currentSampleIndex >= _samples.Count)
+                        return null;
+                }
 
                 Fmp4Sample sample =
                     _samples[_currentSampleIndex];
@@ -259,13 +367,13 @@ namespace uYouWin.Services.Playback.Fmp4
             }
         }
 
-        private async Task ScanFragmentsAsync(
+        private async Task PrepareFragmentScanAsync(
             CancellationToken cancellationToken)
         {
             /*
              * Read moov again because we need the trex defaults.
              */
-            Mp4TopLevelBoxHeader moovHeader =
+            _moovHeader =
                 await FindTopLevelBoxAsync(
                     "moov",
                     cancellationToken);
@@ -274,8 +382,8 @@ namespace uYouWin.Services.Playback.Fmp4
                 await _http.ReadAsync(
                     _moovPayloadOffset,
                     checked((int)(
-                        moovHeader.Size -
-                        moovHeader.HeaderSize)),
+                        _moovHeader.Size -
+                        _moovHeader.HeaderSize)),
                     cancellationToken);
 
             Dictionary<uint, Fmp4TrackInfo>
@@ -306,7 +414,7 @@ namespace uYouWin.Services.Playback.Fmp4
             TrackInfo.DefaultSampleFlags =
                 defaults.DefaultSampleFlags;
 
-            long length;
+            _trexDefaults = defaults;
 
             if (!_http.Length.HasValue)
             {
@@ -326,19 +434,52 @@ namespace uYouWin.Services.Playback.Fmp4
                     "Unable to determine media resource length.");
             }
 
-            length =
+            _mediaLength =
                 _http.Length.Value;
 
-            long offset =
-                _moovPayloadOffset +
-                (moovHeader.Size -
-                 moovHeader.HeaderSize);
-
             _nextScanOffset =
-                offset;
+                _moovPayloadOffset +
+                (_moovHeader.Size -
+                 _moovHeader.HeaderSize);
+        }
 
-            while (offset < length)
+        /*
+         * Scans fragments starting from where the previous call left
+         * off, stopping once either the remote file has been fully
+         * indexed, or the newly indexed samples cover at least
+         * targetWindowSeconds beyond the last already-known sample.
+         *
+         * This allows the initial call (from InitializeAsync) to index
+         * only a small playable window, and subsequent calls (from the
+         * background scan task) to progressively extend the index
+         * while samples already scanned are being played back.
+         */
+        private async Task ScanFragmentsUntilAsync(
+            double targetWindowSeconds,
+            CancellationToken cancellationToken)
+        {
+            long offset = _nextScanOffset;
+
+            TimeSpan windowStart =
+                _samples.Count > 0
+                    ? _samples[_samples.Count - 1].Timestamp
+                    : TimeSpan.Zero;
+
+            while (offset < _mediaLength)
             {
+                if (targetWindowSeconds < double.MaxValue &&
+                    _samples.Count > 0)
+                {
+                    TimeSpan lastTimestamp =
+                        _samples[_samples.Count - 1].Timestamp;
+
+                    if ((lastTimestamp - windowStart).TotalSeconds >=
+                        targetWindowSeconds)
+                    {
+                        break;
+                    }
+                }
+
                 Mp4TopLevelBoxHeader header;
 
                 try
@@ -369,7 +510,7 @@ namespace uYouWin.Services.Playback.Fmp4
                     long mdatOffset =
                         await FindMdatAfterMoofAsync(
                             offset + header.Size,
-                            length,
+                            _mediaLength,
                             cancellationToken);
 
                     Mp4TopLevelBoxHeader mdatHeader =
@@ -385,7 +526,7 @@ namespace uYouWin.Services.Playback.Fmp4
                         moof,
                         offset,
                         mdatPayloadOffset,
-                        defaults);
+                        _trexDefaults);
 
                     offset =
                         mdatOffset +
@@ -398,11 +539,86 @@ namespace uYouWin.Services.Playback.Fmp4
 
                 _nextScanOffset =
                     offset;
+
+                /*
+                 * Wake up any sample/seek readers that may be waiting
+                 * for newly scanned samples to become available.
+                 */
+                SignalScanProgress();
             }
 
-            if (_samples.Count == 0)
-                throw new InvalidDataException(
-                    "No fMP4 fragments were found.");
+            if (offset >= _mediaLength)
+            {
+                _scanComplete = true;
+
+                if (_samples.Count == 0)
+                {
+                    throw new InvalidDataException(
+                        "No fMP4 fragments were found.");
+                }
+
+                TimeSpan lastEnd =
+                    _samples
+                        .Select(s => s.Timestamp + s.Duration)
+                        .Max();
+
+                Duration = lastEnd;
+
+                SignalScanProgress();
+            }
+        }
+
+        private void SignalScanProgress()
+        {
+            lock (_scanLock)
+            {
+                var previous = _scanProgressSignal;
+
+                _scanProgressSignal =
+                    new TaskCompletionSource<bool>();
+
+                previous.TrySetResult(true);
+            }
+        }
+
+        /*
+         * Waits until either the background scan has produced at
+         * least minimumSampleCount samples, or scanning has finished
+         * (in which case the caller must re-check the sample count
+         * itself, since the target may simply not exist).
+         */
+        private async Task WaitForSamplesAsync(
+            int minimumSampleCount,
+            CancellationToken cancellationToken)
+        {
+            while (true)
+            {
+                if (_backgroundScanError != null)
+                    throw new InvalidDataException(
+                        "Background fMP4 fragment scan failed.",
+                        _backgroundScanError);
+
+                if (_samples.Count >= minimumSampleCount)
+                    return;
+
+                if (_scanComplete)
+                    return;
+
+                Task signal;
+
+                lock (_scanLock)
+                {
+                    signal = _scanProgressSignal.Task;
+                }
+
+                await Task.WhenAny(
+                    signal,
+                    Task.Delay(
+                        Timeout.Infinite,
+                        cancellationToken));
+
+                cancellationToken.ThrowIfCancellationRequested();
+            }
         }
 
         private long _moovPayloadOffset;
@@ -1198,6 +1414,26 @@ namespace uYouWin.Services.Playback.Fmp4
 
             _disposed = true;
 
+            try
+            {
+                _cts.Cancel();
+            }
+            catch
+            {
+            }
+
+            SignalScanProgress();
+
+            try
+            {
+                _backgroundScanTask?.Wait(
+                    TimeSpan.FromSeconds(2));
+            }
+            catch
+            {
+            }
+
+            _cts.Dispose();
             _sampleSemaphore.Dispose();
             _http.Dispose();
         }

@@ -170,6 +170,20 @@ namespace uYouWin.Services.Playback
             }
         }
 
+        public double Volume
+        {
+            get
+            {
+                return _volume;
+            }
+            set
+            {
+                _volume = Math.Max(0, Math.Min(1, value));
+            }
+        }
+
+        private double _volume = 1d;
+
         private static IMFMediaEngine CreateEngine()
         {
             var factory = CreateFactory();

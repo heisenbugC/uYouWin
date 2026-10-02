@@ -1,0 +1,61 @@
+<Page x:Class="uYouWin.Views.ChannelPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:local="clr-namespace:uYouWin.Views"
+      Title="Channel"
+      Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+      Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}">
+    <Page.Resources>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+        </Style>
+    </Page.Resources>
+    <DockPanel Margin="24">
+        <StackPanel DockPanel.Dock="Top">
+            <DockPanel>
+                <Image x:Name="ChannelAvatar" Width="64" Height="64" Stretch="Uniform" Margin="0,0,12,0" />
+                <StackPanel>
+                    <TextBlock x:Name="ChannelName" FontSize="28" TextWrapping="Wrap" />
+                    <TextBlock x:Name="ChannelHandle" />
+                </StackPanel>
+            </DockPanel>
+            <TextBlock x:Name="StatisticsText" TextWrapping="Wrap" Margin="0,8" />
+            <Button x:Name="SubscribeButton" Content="Subscribe" HorizontalAlignment="Left" Click="Subscribe_Click" />
+            <TextBlock x:Name="StatusText" TextWrapping="Wrap" Margin="0,8" />
+        </StackPanel>
+        <TabControl>
+            <TabItem Header="Videos">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Recent public uploads from this channel" Margin="8" />
+                    <Button x:Name="LoadMoreButton" DockPanel.Dock="Bottom" Content="Load more uploads"
+                            HorizontalAlignment="Center" Margin="8" IsEnabled="False" Click="LoadMore_Click" />
+        <ListBox x:Name="VideosList" MouseDoubleClick="VideosList_MouseDoubleClick" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <DockPanel Margin="8">
+                        <Image Source="{Binding ThumbnailUrl}" Width="140" Height="80" Stretch="Uniform" Margin="0,0,12,0" />
+                        <StackPanel>
+                            <TextBlock Text="{Binding Title}" TextWrapping="Wrap" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding PublishedAt, StringFormat=d}" />
+                            <local:AddToPlaylistButton />
+                        </StackPanel>
+                    </DockPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+                </DockPanel>
+            </TabItem>
+            <TabItem Header="About">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="12">
+                        <TextBlock x:Name="DescriptionText" TextWrapping="Wrap" Margin="0,0,0,16" />
+                        <TextBlock x:Name="ChannelDetails" TextWrapping="Wrap" />
+                        <TextBox x:Name="ChannelUrl" IsReadOnly="True" BorderThickness="0" Background="Transparent" Margin="0,12" />
+                        <TextBlock Text="Public API counts may be rounded or hidden. Private analytics and personalized recommendations are not available here."
+                                   TextWrapping="Wrap" Margin="0,8" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Page>

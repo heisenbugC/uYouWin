@@ -1,0 +1,28 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'uYouWin'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Prefer32Bit>false</Prefer32Bit>
+    <PlatformTarget Condition="'$(Configuration)' == 'Release'">x64</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'uYouWin' and '$(Configuration)' == 'Release'">
+    <OutputPath>bin\Release\</OutputPath>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE</DefineConstants>
+    <DebugType>pdbonly</DebugType>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'uYouWin'">
+    <Content Update="Assets\yt-dlp\yt-dlp.exe">
+      <TargetPath>yt-dlp.exe</TargetPath>
+    </Content>
+    <Content Update="Assets\yt-dlp\deno.exe">
+      <TargetPath>deno.exe</TargetPath>
+    </Content>
+    <Content Update="Assets\yt-dlp\_internal\**\*.*">
+      <TargetPath>_internal\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+    </Content>
+  </ItemGroup>
+  <Target Name="IncludeReleaseVcrtForwarders" BeforeTargets="_CopyFilesMarkedCopyLocal"
+          DependsOnTargets="ResolveVCRTForwarderReferences"
+          Condition="'$(MSBuildProjectName)' == 'uYouWin' and '$(Configuration)' == 'Release'" />
+</Project>

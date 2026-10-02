@@ -12,14 +12,18 @@ namespace uYouWin.Services.Playback
 
         public List<YtDlpFormat> Formats { get; set; }
 
+        public Dictionary<string, List<YtDlpSubtitle>> Subtitles { get; set; }
+
         public YtDlpVideoInfo()
         {
             Formats = new List<YtDlpFormat>();
+            Subtitles = new Dictionary<string, List<YtDlpSubtitle>>();
         }
     }
 
     internal sealed class YtDlpFormat
     {
+        [Newtonsoft.Json.JsonProperty("format_id")]
         public string FormatID { get; set; }
 
         public string Url { get; set; }
@@ -48,14 +52,25 @@ namespace uYouWin.Services.Playback
 
         public int? Asr { get; set; }
 
+        [Newtonsoft.Json.JsonProperty("audio_channels")]
         public int? AudioChannels { get; set; }
 
         public string Language { get; set; }
 
+        [Newtonsoft.Json.JsonProperty("language_preference")]
         public int? LanguagePreference { get; set; }
 
+        [Newtonsoft.Json.JsonProperty("format_note")]
         public string FormatNote { get; set; }
 
+        [Newtonsoft.Json.JsonProperty("has_drm")]
         public bool? HasDrm { get; set; }
+    }
+
+    internal sealed class YtDlpSubtitle
+    {
+        public string Ext { get; set; }
+
+        public string Url { get; set; }
     }
 }

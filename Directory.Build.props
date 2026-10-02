@@ -1,0 +1,10 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'uYouWin' and '$(Configuration)' == 'Release'">
+    <OutputPath>bin\Release\</OutputPath>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <RuntimeIdentifiers>win;win-x64;win-x86;win-arm64</RuntimeIdentifiers>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'uYouWin'">
+    <PackageReference Include="Microsoft.VCRTForwarders.140" Version="1.0.6" />
+  </ItemGroup>
+</Project>

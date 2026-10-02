@@ -2,7 +2,7 @@
 
 namespace uYouWin.Models
 {
-    internal class Playlist
+    public class Playlist
     {
         public string Id { get; set; }
 
@@ -14,9 +14,12 @@ namespace uYouWin.Models
 
         public List<string> VideoIds { get; set; }
 
+        public List<Video> Videos { get; set; }
+
         public Playlist()
         {
             VideoIds = new List<string>();
+            Videos = new List<Video>();
         }
     }
 }

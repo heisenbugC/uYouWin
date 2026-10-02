@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -105,7 +106,10 @@ namespace uYouWin.Services.Playback
 
                 Language = audioFormat.Language,
 
-                DurationSeconds = info.Duration ?? 0
+                DurationSeconds = info.Duration ?? 0,
+
+                AudioTrackLabels = CollectAudioLabels(info),
+                SubtitleTracks = CollectSubtitleTracks(info)
             };
         }
 
@@ -113,12 +117,27 @@ namespace uYouWin.Services.Playback
             YtDlpVideoInfo info,
             PlaybackSettings settings)
         {
-            return info.Formats
+            var usable = info.Formats
                 .Where(IsUsableH264Video)
-                .Where(f =>
-                    f.Height.HasValue &&
-                    f.Height.Value > 0 &&
-                    f.Height.Value <= settings.MaxVideoHeight)
+                .Where(f => f.Height.HasValue && f.Height.Value > 0)
+                .ToList();
+
+            if (usable.Count == 0)
+                return null;
+
+            if (settings.MaxVideoHeight > 0 && settings.MaxVideoHeight < 8000)
+            {
+                var capped = usable
+                    .Where(f => f.Height.Value <= settings.MaxVideoHeight)
+                    .ToList();
+
+                if (capped.Count > 0)
+                    usable = capped;
+                else
+                    return usable.OrderBy(f => f.Height.Value).First();
+            }
+
+            return usable
                 .OrderByDescending(f => f.Height.Value)
                 .ThenByDescending(f => f.Fps ?? 0)
                 .ThenByDescending(f => f.Tbr ?? 0)
@@ -136,24 +155,92 @@ namespace uYouWin.Services.Playback
             if (candidates.Count == 0)
                 return null;
 
-            /*
-             * Prefer the original/default language.
-             *
-             * yt-dlp generally gives language_preference > 0 to
-             * preferred/original tracks.
-             */
+            if (!string.IsNullOrWhiteSpace(settings.PreferredAudioLanguage))
+            {
+                var preferred = candidates
+                    .Where(f =>
+                        string.Equals(
+                            f.Language,
+                            settings.PreferredAudioLanguage,
+                            StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (preferred.Count > 0)
+                    candidates = preferred;
+            }
+
             candidates = candidates
                 .OrderByDescending(f => f.LanguagePreference ?? 0)
                 .ThenBy(f =>
                 {
                     double abr = f.Abr ?? 0;
-                    return Math.Abs(
-                        abr - settings.TargetAudioBitrateKbps);
+                    return Math.Abs(abr - settings.TargetAudioBitrateKbps);
                 })
                 .ThenByDescending(f => f.Abr ?? 0)
                 .ToList();
 
             return candidates[0];
+        }
+
+        private static List<string> CollectAudioLabels(YtDlpVideoInfo info)
+        {
+            var labels = new List<string>();
+
+            foreach (YtDlpFormat format in info.Formats.Where(IsUsableAacAudio))
+            {
+                string label = string.IsNullOrWhiteSpace(format.Language)
+                    ? "Default"
+                    : format.Language;
+
+                if (!labels.Contains(label))
+                    labels.Add(label);
+            }
+
+            if (labels.Count == 0)
+                labels.Add("Default");
+
+            return labels;
+        }
+
+        private static List<SubtitleTrack> CollectSubtitleTracks(YtDlpVideoInfo info)
+        {
+            var tracks = new List<SubtitleTrack>();
+
+            if (info.Subtitles == null)
+                return tracks;
+
+            foreach (var pair in info.Subtitles)
+            {
+                if (pair.Value == null)
+                    continue;
+
+                YtDlpSubtitle chosen = null;
+
+                foreach (YtDlpSubtitle candidate in pair.Value)
+                {
+                    if (candidate == null || string.IsNullOrWhiteSpace(candidate.Url))
+                        continue;
+
+                    if (string.Equals(candidate.Ext, "vtt", StringComparison.OrdinalIgnoreCase))
+                    {
+                        chosen = candidate;
+                        break;
+                    }
+
+                }
+
+                if (chosen == null)
+                    continue;
+
+                tracks.Add(new SubtitleTrack
+                {
+                    Language = pair.Key,
+                    Label = pair.Key,
+                    Url = chosen.Url
+                });
+            }
+
+            return tracks;
         }
 
         private static bool IsUsableH264Video(
@@ -256,9 +343,11 @@ namespace uYouWin.Services.Playback
             var startInfo = new ProcessStartInfo
             {
                 FileName = _ytDlpPath,
+                WorkingDirectory = Path.GetDirectoryName(_ytDlpPath),
 
                 Arguments =
-                    "-j --no-playlist --no-warnings \"" +
+                    "-j --no-playlist --no-warnings --no-cache-dir --js-runtimes \"deno:" +
+                    Path.Combine(Path.GetDirectoryName(_ytDlpPath), "deno.exe") + "\" \"" +
                     escapedUrl +
                     "\"",
 

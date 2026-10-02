@@ -49,5 +49,15 @@ namespace uYouWin.Models
         public string Language { get; set; }
 
         public double DurationSeconds { get; set; }
+
+        public List<string> AudioTrackLabels { get; set; }
+
+        public List<SubtitleTrack> SubtitleTracks { get; set; }
+
+        public PlaybackResource()
+        {
+            AudioTrackLabels = new List<string>();
+            SubtitleTracks = new List<SubtitleTrack>();
+        }
     }
 }

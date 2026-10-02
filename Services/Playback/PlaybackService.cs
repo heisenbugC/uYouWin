@@ -54,8 +54,14 @@ namespace uYouWin.Services.Playback
             private set;
         }
 
+        public Video CurrentVideo
+        {
+            get;
+            private set;
+        }
+
         public async Task PlayAsync(
-            Video video)
+            Video video, string audioLanguage = null)
         {
             ThrowIfDisposed();
 
@@ -71,16 +77,23 @@ namespace uYouWin.Services.Playback
             CancellationToken token =
                 _playbackCancellation.Token;
 
+            PlaybackSettings settings =
+                PlaybackSettingsStore.Load();
+            settings.PreferredAudioLanguage = audioLanguage;
+
             PlaybackResource resource =
                 await _resolver.ResolveAsync(
                     video,
-                    _settings,
+                    settings,
                     token);
 
             token.ThrowIfCancellationRequested();
 
             CurrentResource =
                 resource;
+
+            CurrentVideo =
+                video;
 
             await _player.OpenAsync(
                 resource,
@@ -107,6 +120,9 @@ namespace uYouWin.Services.Playback
             _player.Stop();
 
             CurrentResource =
+                null;
+
+            CurrentVideo =
                 null;
         }
 

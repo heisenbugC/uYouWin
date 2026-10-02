@@ -1,6 +1,6 @@
 ﻿namespace uYouWin.Models
 {
-    internal class Subscription
+    public class Subscription
     {
         public string ChannelId { get; set; }
 

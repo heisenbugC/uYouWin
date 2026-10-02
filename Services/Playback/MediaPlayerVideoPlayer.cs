@@ -60,14 +60,30 @@ namespace uYouWin.Services.Playback
                 MediaSource.CreateFromMediaStreamSource(
                     _streamSource.Source);
 
-            Player.Source =
-                _mediaSource;
+            var opened = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Windows.Foundation.TypedEventHandler<MediaPlayer, object> onOpened = (s, e) => opened.TrySetResult(true);
+            Windows.Foundation.TypedEventHandler<MediaPlayer, MediaPlayerFailedEventArgs> onFailed =
+                (s, e) => opened.TrySetException(new InvalidOperationException(e.ErrorMessage));
+            Player.MediaOpened += onOpened;
+            Player.MediaFailed += onFailed;
+            try
+            {
+                using (cancellationToken.Register(() => opened.TrySetCanceled()))
+                {
+                    Player.Source = _mediaSource;
+                    await opened.Task;
+                }
+            }
+            finally
+            {
+                Player.MediaOpened -= onOpened;
+                Player.MediaFailed -= onFailed;
+            }
         }
 
         public void Play()
         {
             ThrowIfDisposed();
-
             Player.Play();
         }
 
@@ -144,6 +160,24 @@ namespace uYouWin.Services.Playback
                         .PlaybackSession
                         .PlaybackState ==
                     MediaPlaybackState.Playing;
+            }
+        }
+
+        public double Volume
+        {
+            get
+            {
+                if (_disposed)
+                    return 0;
+
+                return Player.Volume;
+            }
+            set
+            {
+                if (_disposed)
+                    return;
+
+                Player.Volume = Math.Max(0, Math.Min(1, value));
             }
         }
 

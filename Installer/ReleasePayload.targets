@@ -1,0 +1,28 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <AppProject>$(MSBuildThisFileDirectory)..\uYouWin.csproj</AppProject>
+    <AppReleaseDir>$(MSBuildThisFileDirectory)..\bin\Release\</AppReleaseDir>
+    <PayloadDir>$(MSBuildProjectDirectory)\$(IntermediateOutputPath)Payload\</PayloadDir>
+    <DefineConstants>$(DefineConstants);PayloadDir=$(PayloadDir)</DefineConstants>
+  </PropertyGroup>
+  <Target Name="StageReleasePayload" BeforeTargets="GenerateCompileWithObjectPath">
+    <Exec Command="&quot;$(MSBuildBinPath)\MSBuild.exe&quot; &quot;$(AppProject)&quot; /restore /t:Build /p:Configuration=Release /p:Platform=x64 /p:RuntimeIdentifier=win-x64 /nologo /v:minimal /nr:false" Timeout="28000" />
+    <Error Condition="!Exists('$(AppReleaseDir)uYouWin.exe') Or !Exists('$(AppReleaseDir)yt-dlp.exe') Or !Exists('$(AppReleaseDir)deno.exe') Or !Exists('$(AppReleaseDir)Microsoft.Toolkit.Win32.UI.XamlHost.dll') Or !Exists('$(AppReleaseDir)Microsoft.Toolkit.Win32.UI.XamlHost.pri') Or !Exists('$(AppReleaseDir)vcruntime140_app.dll')" Text="Release runtime payload is incomplete." />
+    <RemoveDir Directories="$(PayloadDir)" />
+    <MakeDir Directories="$(PayloadDir)" />
+    <ItemGroup>
+      <ReleaseRootFiles Include="$(AppReleaseDir)*.dll;$(AppReleaseDir)*.exe;$(AppReleaseDir)*.winmd;$(AppReleaseDir)*.pri;$(AppReleaseDir)uYouWin.exe.config" />
+      <ReleaseSatellites Include="$(AppReleaseDir)**\*.resources.dll" Exclude="$(AppReleaseDir)Data\**;$(AppReleaseDir)Cache\**;$(AppReleaseDir)Assets\**;$(AppReleaseDir)_internal\**" />
+      <YtDlpRuntime Include="$(AppReleaseDir)_internal\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ReleaseRootFiles)" DestinationFolder="$(PayloadDir)" />
+    <Copy SourceFiles="@(ReleaseSatellites)" DestinationFiles="@(ReleaseSatellites->'$(PayloadDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="@(YtDlpRuntime)" DestinationFiles="@(YtDlpRuntime->'$(PayloadDir)_internal\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Exec Command="&quot;$(WixToolPath)heat.exe&quot; dir &quot;$(PayloadDir).&quot; -nologo -ag -srd -sreg -scom -dr INSTALLFOLDER -cg ReleasePayload -var var.PayloadDir -out &quot;$(IntermediateOutputPath)ReleasePayload.wxs&quot;" Timeout="28000" />
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)ReleasePayload.wxs" />
+      <FileWrites Include="$(IntermediateOutputPath)ReleasePayload.wxs" />
+    </ItemGroup>
+  </Target>
+</Project>

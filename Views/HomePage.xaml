@@ -4,41 +4,115 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:uYouWin.Views"
+      xmlns:ui="http://schemas.modernwpf.com/2019"
       mc:Ignorable="d" 
       d:DesignHeight="768" d:DesignWidth="1024"
       Title="HomePage">
 
+    <Page.Resources>
+        <local:TitleTrimConverter x:Key="TitleTrimConverter" />
+    </Page.Resources>
+
     <Grid Margin="32">
-        <StackPanel>
-            <TextBlock
-                Text="Home"
-                Style="{DynamicResource HeaderTextBlockStyle}"
-                Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-            />
-            
-            <TextBlock
-                Text="Welcome to use uYouWin!"
-                Margin="0,12,0,0"
-                Style="{DynamicResource TextBlockStyle}"
-                Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-            />
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock
+            Grid.Row="0"
+            Text="Home"
+            Style="{DynamicResource HeaderTextBlockStyle}"
+            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+        />
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,16,0,0">
+            <TextBox
+                x:Name="QueryTextBox"
+                Width="400"
+                KeyDown="QueryTextBox_KeyDown" />
 
             <Button
-                Width="140"
-                Height="36"
-                Margin="24"
-                Content="Test Connection"
-                Click="TestInvidious_Click" />
-
-            <Button
-                x:Name="TestPlaybackButton"
-                Content="Test YouTube Playback"
-                Width="220"
-                Height="48"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Top"
-                Margin="24"
-                Click="TestPlaybackButton_Click" />
+                Content="Search"
+                Margin="12,0,0,0"
+                Click="SearchButton_Click" />
         </StackPanel>
+
+        <Grid Grid.Row="2" Margin="0,16,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock
+                    x:Name="ResultsHeaderTextBlock"
+                    Text="Recommendations"
+                    Style="{DynamicResource SubtitleTextBlockStyle}"
+                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                />
+
+                <Button
+                    x:Name="RefreshButton"
+                    Margin="12,0,0,0"
+                    Width="32" Height="32"
+                    ToolTip="Refresh recommendations"
+                    Click="RefreshButton_Click">
+                    <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE72C;" />
+                </Button>
+            </StackPanel>
+
+            <ListBox
+                x:Name="ResultsListBox"
+                Grid.Row="1"
+                Margin="0,16,0,0"
+                Background="Transparent"
+                BorderThickness="0"
+                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                MouseDoubleClick="ResultsListBox_MouseDoubleClick">
+
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="8" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
+
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Width="220">
+                            <Border
+                                Width="220"
+                                Height="124"
+                                Background="#22000000"
+                                CornerRadius="4">
+                                <Image
+                                    Source="{Binding ThumbnailUrl}"
+                                    Stretch="UniformToFill" />
+                            </Border>
+
+                            <TextBlock
+                                Text="{Binding Title, Converter={StaticResource TitleTrimConverter}}"
+                                TextWrapping="NoWrap"
+                                TextTrimming="CharacterEllipsis"
+                                Margin="0,6,0,0"
+                                FontSize="14"
+                                Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+                            <local:AddToPlaylistButton />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <Button Grid.Row="2" Content="Load more results" Margin="0,12,0,0" HorizontalAlignment="Center"
+                    IsEnabled="{Binding HasMoreResults}" Click="LoadMore_Click" />
+        </Grid>
     </Grid>
 </Page>

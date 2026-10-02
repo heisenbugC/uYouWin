@@ -326,26 +326,38 @@ namespace uYouWin.Services.Playback
                buffer[offset + 3] = (byte)((value >> 24) & 0xFF);
                    }
 
-        private void Source_Starting(
+        private async void Source_Starting(
             MediaStreamSource sender,
             MediaStreamSourceStartingEventArgs args)
         {
+            MediaStreamSourceStartingRequestDeferral deferral =
+                args.Request.GetDeferral();
+
             try
             {
+                // A null position means resume without repositioning the readers.
+                if (!args.Request.StartPosition.HasValue)
+                    return;
+
                 TimeSpan requested =
-                    (TimeSpan)args.Request.StartPosition;
+                    args.Request.StartPosition.Value;
 
                 if (requested < TimeSpan.Zero)
                     requested =
                         TimeSpan.Zero;
 
+                CancellationToken token =
+                    _cts.Token;
+
                 Fmp4SeekResult videoSeek =
-                    _videoReader.PrepareSeek(
-                        requested);
+                    await _videoReader.PrepareSeekAsync(
+                        requested,
+                        token);
 
                 Fmp4SeekResult audioSeek =
-                    _audioReader.PrepareSeek(
-                        requested);
+                    await _audioReader.PrepareSeekAsync(
+                        requested,
+                        token);
 
                 TimeSpan actualStart =
                     videoSeek.ActualStart <
@@ -357,11 +369,13 @@ namespace uYouWin.Services.Playback
                  * Both readers must start at or after the actual
                  * timeline position we advertise.
                  */
-                _videoReader.PrepareSeek(
-                    actualStart);
+                await _videoReader.PrepareSeekAsync(
+                    actualStart,
+                    token);
 
-                _audioReader.PrepareSeek(
-                    actualStart);
+                await _audioReader.PrepareSeekAsync(
+                    actualStart,
+                    token);
 
                 args.Request.SetActualStartPosition(
                     actualStart);
@@ -370,6 +384,10 @@ namespace uYouWin.Services.Playback
             {
                 sender.NotifyError(
                     MediaStreamSourceErrorStatus.Other);
+            }
+            finally
+            {
+                deferral.Complete();
             }
         }
 

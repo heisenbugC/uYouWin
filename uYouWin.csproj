@@ -103,6 +103,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Models\AppPreferences.cs" />
     <Compile Include="Models\ArchiveImportResult.cs" />
     <Compile Include="Models\Channel.cs" />
     <Compile Include="Models\HistoryEntry.cs" />
@@ -110,11 +111,20 @@
     <Compile Include="Models\PlaybackResource.cs" />
     <Compile Include="Models\PlaybackSettings.cs" />
     <Compile Include="Models\Playlist.cs" />
+    <Compile Include="Models\SearchHistoryEntry.cs" />
     <Compile Include="Models\Subscription.cs" />
+    <Compile Include="Models\SubtitleTrack.cs" />
     <Compile Include="Models\Thumbnail.cs" />
     <Compile Include="Models\Video.cs" />
+    <Compile Include="Models\VideoComment.cs" />
+    <Compile Include="Models\VideoSearchPage.cs" />
+    <Compile Include="Models\YouTubeApiSettings.cs" />
     <Compile Include="Services\Archive\ArchiveImporterInterface.cs" />
     <Compile Include="Services\Archive\GoogleTakeoutImporter.cs" />
+    <Compile Include="Services\Cache\DiskCache.cs" />
+    <Compile Include="Services\Cache\QueryNormalizer.cs" />
+    <Compile Include="Services\Cache\SearchResultCache.cs" />
+    <Compile Include="Services\Cache\VisitedUrlCache.cs" />
     <Compile Include="Services\Invidious\InvidiousClient.cs" />
     <Compile Include="Services\Invidious\InvidiousException.cs" />
     <Compile Include="Services\Invidious\InvidiousInstanceManager.cs" />
@@ -136,25 +146,40 @@
     <Compile Include="Services\Playback\Native\MFNative.cs" />
     <Compile Include="Services\Playback\PlaybackResolverInterface.cs" />
     <Compile Include="Services\Playback\PlaybackService.cs" />
+    <Compile Include="Services\Playback\PlaybackSettingsStore.cs" />
     <Compile Include="Services\Playback\Streaming\HttpRangeReader.cs" />
+    <Compile Include="Services\Playback\SubtitleCueLoader.cs" />
     <Compile Include="Services\Playback\VideoPlayerInterface.cs" />
     <Compile Include="Services\Playback\YouTubeMediaStreamSource.cs" />
     <Compile Include="Services\Playback\YtDlpJsonModels.cs" />
     <Compile Include="Services\Playback\YtDlpPlaybackResolver.cs" />
+    <Compile Include="Services\Preferences\AppPreferencesStore.cs" />
+    <Compile Include="Services\Storage\DataPathProvider.cs" />
+    <Compile Include="Services\YouTube\YouTubeApiClient.cs" />
+    <Compile Include="Services\YouTube\YouTubeApiException.cs" />
+    <Compile Include="Services\YouTube\YouTubeApiService.cs" />
+    <Compile Include="Services\YouTube\YouTubeApiServiceInterface.cs" />
+    <Compile Include="Services\YouTube\YouTubeApiSettingsStore.cs" />
+    <Compile Include="ViewModels\AsyncRelayCommand.cs" />
+    <Compile Include="ViewModels\HomePageViewModel.cs" />
+    <Compile Include="ViewModels\PlaybackViewModel.cs" />
+    <Compile Include="ViewModels\RelayCommand.cs" />
+    <Compile Include="ViewModels\ViewModelBase.cs" />
+    <Compile Include="Views\AddToPlaylistButton.cs" />
+    <Compile Include="Views\ChannelPage.xaml.cs">
+      <DependentUpon>ChannelPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\FullscreenOverlayWindow.xaml.cs">
+      <DependentUpon>FullScreenOverlayWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\HistoryPage.xaml.cs">
       <DependentUpon>HistoryPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\HomePage.xaml.cs">
       <DependentUpon>HomePage.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\LibraryPage.xaml.cs">
-      <DependentUpon>LibraryPage.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Views\PlaylistPage.xaml.cs">
       <DependentUpon>PlaylistPage.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\SearchPage.xaml.cs">
-      <DependentUpon>SearchPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\SettingsPage.xaml.cs">
       <DependentUpon>SettingsPage.xaml</DependentUpon>
@@ -162,9 +187,11 @@
     <Compile Include="Views\SubsPage.xaml.cs">
       <DependentUpon>SubsPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\TitleTrimConverter.cs" />
     <Compile Include="Views\VideoPage.xaml.cs">
       <DependentUpon>VideoPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\VideoViewport.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -177,6 +204,13 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="Views\ChannelPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\FullScreenOverlayWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Views\HistoryPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -185,15 +219,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Views\LibraryPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="Views\PlaylistPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\SearchPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -228,22 +254,35 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <None Include="Directory.Build.props" />
+    <None Include="Directory.Build.targets" />
+    <None Include="Installer\BundleRelease.targets" />
+    <None Include="Installer\ReleasePayload.targets" />
     <None Include="Properties\app.manifest" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
     <None Include="README.md" />
+    <None Include="Tests\Inspect-ToolkitLayout.ps1" />
+    <None Include="Tests\Inspect-UiResources.ps1" />
+    <None Include="Tests\Invoke-NativeSurfaceRegression.ps1" />
+    <None Include="Tests\NativeSurfaceProbe.manifest" />
+    <None Include="Tests\Run-ApiPagingRegression.ps1" />
+    <None Include="Tests\Run-DiskCacheRegression.ps1" />
+    <None Include="Tests\Run-FeatureRegression.ps1" />
+    <None Include="Tests\Run-NativeSurfaceRegression.ps1" />
+    <None Include="Tests\Run-PresentationRegression.ps1" />
+    <None Include="Tests\Test-InstallerPayload.ps1" />
+    <None Include="uYouWin_conversation.md" />
     <None Include="uYouWin_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Assets\yt-dlp\_internal\" />
     <Folder Include="Data\" />
     <Folder Include="Resources\" />
-    <Folder Include="ViewModels\" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Assets\icons\uYouWin.png" />
@@ -280,7 +319,7 @@
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.8">
       <Visible>False</Visible>
-      <ProductName>Microsoft .NET Framework 4.8 %28x86 ??x64%29</ProductName>
+      <ProductName>Microsoft .NET Framework 4.8 %28x86 和 x64%29</ProductName>
       <Install>true</Install>
     </BootstrapperPackage>
     <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
@@ -291,9 +330,28 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include=".gitignore" />
-    <Content Include="Assets\yt-dlp\deno.exe"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
-    <Content Include="Assets\yt-dlp\yt-dlp.exe"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
-    <Content Include="Assets\yt-dlp\_internal\**\*.*"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+    <Resource Include="Tests\NativeSurfaceProbeHost.cs.txt" />
+    <Resource Include="Assets\icons\fwd.ico" />
+    <Resource Include="Assets\icons\next.ico" />
+    <Resource Include="Assets\icons\pause.ico" />
+    <Resource Include="Assets\icons\play.ico" />
+    <Resource Include="Assets\icons\prev.ico" />
+    <Resource Include="Assets\icons\rwd.ico" />
+    <Resource Include="Assets\icons\fwd.png" />
+    <Resource Include="Assets\icons\next.png" />
+    <Resource Include="Assets\icons\pause.png" />
+    <Resource Include="Assets\icons\play.png" />
+    <Resource Include="Assets\icons\prev.png" />
+    <Resource Include="Assets\icons\rwd.png" />
+    <Content Include="Assets\yt-dlp\deno.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\yt-dlp\yt-dlp.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\yt-dlp\_internal\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <PublishFile Include=".gitignore">

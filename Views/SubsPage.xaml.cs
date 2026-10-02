@@ -23,6 +23,35 @@ namespace uYouWin.Views
         public SubsPage()
         {
             InitializeComponent();
+            Loaded += async (s, e) => await RefreshAsync();
+        }
+
+        private async Task RefreshAsync()
+        {
+            try
+            {
+                SubscriptionsList.ItemsSource = await App.LibraryService.GetSubscriptionsAsync();
+                StatusText.Text = SubscriptionsList.Items.Count == 0 ? "Subscribe from a channel page or import Takeout subscriptions in Settings." : "";
+            }
+            catch (Exception ex) { StatusText.Text = ex.Message; }
+        }
+
+        private void OpenChannel_Click(object sender, RoutedEventArgs e)
+        {
+            if (SubscriptionsList.SelectedItem is Models.Subscription subscription)
+                NavigationService?.Navigate(new ChannelPage(subscription.ChannelId));
+        }
+
+        private async void Unsubscribe_Click(object sender, RoutedEventArgs e)
+        {
+            if (!(SubscriptionsList.SelectedItem is Models.Subscription subscription))
+                return;
+            try
+            {
+                await App.LibraryService.RemoveSubscriptionAsync(subscription.ChannelId);
+                await RefreshAsync();
+            }
+            catch (Exception ex) { StatusText.Text = ex.Message; }
         }
     }
 }

@@ -9,12 +9,42 @@
       Title="PlaylistPage">
 
     <Grid Margin="32">
-        <TextBlock
-            Text="Playlist"
-            Style="{DynamicResource HeaderTextBlockStyle}"
-            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-        />
-
-        <Button Content="Create Playlist"></Button>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+            <TextBlock x:Name="PlaylistsTitle" Grid.Row="0" Text="Playlists" FontSize="28" Margin="0,0,0,16"
+                       Visibility="Visible" HorizontalAlignment="Left"
+                       Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+            <WrapPanel Grid.Row="1">
+                <TextBox x:Name="PlaylistName" Width="180" Margin="0,0,8,0" />
+                <Button Content="Create" Click="Create_Click" />
+                <Button Content="Rename" Click="Rename_Click" Margin="8,0" />
+                <Button Content="Delete" Click="Delete_Click" />
+            </WrapPanel>
+            <WrapPanel Grid.Row="2" Margin="0,8">
+                <Button x:Name="AddVideoButton" Content="Add playing video" Click="AddVideo_Click" />
+                <Button Content="Remove video" Margin="8,0" Click="RemoveVideo_Click" />
+                <Button Content="Move up" Click="MoveUp_Click" />
+                <Button Content="Move down" Margin="8,0" Click="MoveDown_Click" />
+            </WrapPanel>
+            <TextBlock x:Name="StatusText" Grid.Row="3" TextWrapping="Wrap" />
+            <Grid Grid.Row="4">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="2*" /></Grid.ColumnDefinitions>
+                <ListBox x:Name="PlaylistsList" DisplayMemberPath="Title" SelectionChanged="PlaylistsList_SelectionChanged" />
+                <ListBox x:Name="VideosList" Grid.Column="1" MouseDoubleClick="VideosList_MouseDoubleClick" Margin="8,0,0,0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="8">
+                                <TextBlock Text="{Binding Title}" TextWrapping="Wrap" />
+                                <local:AddToPlaylistButton />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
     </Grid>
 </Page>

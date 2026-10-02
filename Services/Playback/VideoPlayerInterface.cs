@@ -32,6 +32,8 @@ namespace uYouWin.Services.Playback
 
         bool IsPlaying { get; }
 
+        double Volume { get; set; }
+
         object NativePlayer { get; }
     }
 }

@@ -15,14 +15,16 @@
 
         <!-- Main Component Space Partition -->
         <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="88"/>
+            <RowDefinition x:Name="NavigationRow" Height="*"/>
+            <RowDefinition x:Name="PlaybackBarRow" Height="88"/>
         </Grid.RowDefinitions>
 
         <!-- Navigation View & Associated Active Page-->
         <ui:NavigationView
             x:Name="NavigationView"
             IsSettingsVisible="True"
+            IsBackButtonVisible="Visible"
+            BackRequested="NavigationView_BackRequested"
             SelectionChanged="NavigationView_SelectionChanged">
 
             <ui:NavigationView.MenuItems>
@@ -52,22 +54,20 @@
                     Icon="List"
                     Tag="Playlists" />
 
-                <ui:NavigationViewItem
-                    Content="Library"
-                    Icon="Library"
-                    Tag="Library" />
 
             </ui:NavigationView.MenuItems>
 
             <ui:NavigationView.Content>
                 <Frame
                     x:Name="ContentFrame"
-                    NavigationUIVisibility="Hidden"/>
+                    NavigationUIVisibility="Hidden"
+                    Navigated="ContentFrame_Navigated"/>
             </ui:NavigationView.Content>
 
         </ui:NavigationView>
 
         <Border 
+            x:Name="PlaybackBarBorder"
             Grid.Row="1" 
             BorderThickness="0,1,0,0"
             BorderBrush="{DynamicResource SystemControlForegroundBaseHighBrush}"
@@ -78,15 +78,18 @@
             <Grid Margin="16,4">
 
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="4" />
+                    <RowDefinition Height="20" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <ProgressBar
+                <Slider
+                    x:Name="PlaybackScrubBar"
                     Grid.Row="0"
                     Maximum="100"
                     Minimum="0"
-                    Value="35" />
+                    Value="0"
+                    IsMoveToPointEnabled="True"
+                    SmallChange="5" />
 
                 <Grid
                     Grid.Row="1"
@@ -98,19 +101,60 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <Button Width="48" Height="48" VerticalAlignment="Center">
-                        <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE768;" />
-                    </Button>
+                    <StackPanel
+                        Grid.Column="0"
+                        Orientation="Horizontal"
+                        VerticalAlignment="Center">
 
-                    <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center">
-                        <TextBlock 
-                            Text="Nothing Playing" 
-                            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+                        <Button
+                            x:Name="BottomLastButton"
+                            Width="48" Height="48"
+                            Click="BottomLastButton_Click"
+                            ToolTip="Previous">
+                            <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE892;" />
+                        </Button>
 
-                        <TextBlock
-                            Text="Select a video to start playback"
-                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                        <Button
+                            x:Name="BottomPlayPauseButton"
+                            Width="48" Height="48"
+                            Margin="4,0,0,0"
+                            Click="BottomPlayPauseButton_Click">
+                            <ui:FontIcon x:Name="BottomPlayPauseIcon" FontFamily="Segoe MDL2 Assets" Glyph="&#xE768;" />
+                        </Button>
+
+                        <Button
+                            x:Name="BottomNextButton"
+                            Width="48" Height="48"
+                            Margin="4,0,0,0"
+                            Click="BottomNextButton_Click"
+                            ToolTip="Next">
+                            <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE893;" />
+                        </Button>
                     </StackPanel>
+
+                    <Button
+                        x:Name="NowPlayingButton"
+                        Grid.Column="1"
+                        Margin="16,0"
+                        HorizontalAlignment="Left"
+                        HorizontalContentAlignment="Left"
+                        VerticalAlignment="Center"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="NowPlayingButton_Click"
+                        ToolTip="Go to Now Playing video">
+                        <StackPanel>
+                            <TextBlock
+                                x:Name="NowPlayingTitleTextBlock"
+                                Text="Nothing Playing"
+                                Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+
+                            <TextBlock
+                                x:Name="NowPlayingSubtitleTextBlock"
+                                Text="Select a video to start playback"
+                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                        </StackPanel>
+                    </Button>
 
                     <StackPanel 
                         Grid.Column="2" 
@@ -118,16 +162,125 @@
                         VerticalAlignment="Center">
 
                         <Button
+                            x:Name="BottomVolumeButton"
                             Width="48"
-                            Height="48">
-                            <!-- This icon should be dynamic based on the volume level -->
-                            <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE995;" />
+                            Height="48"
+                            Click="BottomVolumeButton_Click"
+                            ToolTip="Volume">
+                            <ui:FontIcon x:Name="BottomVolumeIcon" FontFamily="Segoe MDL2 Assets" Glyph="&#xE995;" />
                         </Button>
 
+                        <Popup
+                            x:Name="BottomVolumePopup"
+                            PlacementTarget="{Binding ElementName=BottomVolumeButton}"
+                            Placement="Top"
+                            StaysOpen="False"
+                            IsOpen="False">
+                            <Border
+                                Background="{DynamicResource SystemControlChromeLowAcrylicWindowMediumBrush}"
+                                BorderThickness="1"
+                                BorderBrush="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                CornerRadius="4"
+                                Padding="8">
+                                <Slider
+                                    x:Name="BottomVolumeSlider"
+                                    Width="28"
+                                    Height="120"
+                                    Orientation="Vertical"
+                                    Minimum="0"
+                                    Maximum="1"
+                                    Value="1"
+                                    ValueChanged="BottomVolumeSlider_ValueChanged" />
+                            </Border>
+                        </Popup>
+
                         <Button
+                            x:Name="BottomPlaylistToggleButton"
                             Width="48"
-                            Height="48">
+                            Height="48"
+                            Margin="4,0,0,0"
+                            Click="BottomPlaylistToggleButton_Click"
+                            ToolTip="Playlist">
+                            <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8FD;" />
+                        </Button>
+
+                        <Popup
+                            x:Name="BottomPlaylistPopup"
+                            PlacementTarget="{Binding ElementName=BottomPlaylistToggleButton}"
+                            Placement="Top"
+                            StaysOpen="False"
+                            IsOpen="False">
+                            <Border
+                                Background="{DynamicResource SystemControlChromeLowAcrylicWindowMediumBrush}"
+                                BorderThickness="1"
+                                BorderBrush="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                CornerRadius="4"
+                                Padding="8"
+                                Width="280"
+                                Height="320">
+                                <ListBox
+                                    x:Name="BottomPlaylistListBox"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    DisplayMemberPath="Title"
+                                    MouseDoubleClick="BottomPlaylistListBox_MouseDoubleClick" />
+                            </Border>
+                        </Popup>
+
+                        <Button
+                            x:Name="BottomMoreButton"
+                            Width="48"
+                            Height="48"
+                            Margin="4,0,0,0"
+                            Click="BottomMoreButton_Click"
+                            ToolTip="Audio, subtitles &amp; info">
                             <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE712;" />
+                        </Button>
+
+                        <Popup
+                            x:Name="BottomMorePopup"
+                            PlacementTarget="{Binding ElementName=BottomMoreButton}"
+                            Placement="Top"
+                            StaysOpen="False"
+                            IsOpen="False">
+                            <Border
+                                Background="{DynamicResource SystemControlChromeLowAcrylicWindowMediumBrush}"
+                                BorderThickness="1"
+                                BorderBrush="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                CornerRadius="4"
+                                Padding="12"
+                                MinWidth="220">
+                                <StackPanel>
+                                    <TextBlock
+                                        Text="Audio track"
+                                        FontWeight="Bold"
+                                        Margin="0,0,0,4" />
+                                    <ComboBox x:Name="BottomAudioTrackComboBox" Margin="0,0,0,12" />
+
+                                    <TextBlock
+                                        Text="Subtitles"
+                                        FontWeight="Bold"
+                                        Margin="0,0,0,4" />
+                                    <ComboBox x:Name="BottomSubtitleTrackComboBox" Margin="0,0,0,12" />
+
+                                    <TextBlock
+                                        Text="Video info"
+                                        FontWeight="Bold"
+                                        Margin="0,0,0,4" />
+                                    <TextBlock
+                                        x:Name="BottomVideoInfoTextBlock"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+
+                        <Button
+                            x:Name="BottomStopButton"
+                            Width="48"
+                            Height="48"
+                            Margin="4,0,0,0"
+                            Click="BottomStopButton_Click">
+                            <ui:FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE71A;" />
                         </Button>
                     </StackPanel>
                 </Grid>

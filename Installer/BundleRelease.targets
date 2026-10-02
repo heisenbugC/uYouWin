@@ -1,0 +1,12 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <InstallerRoot>$(MSBuildThisFileDirectory)..\..\</InstallerRoot>
+    <VCRedistSource Condition="'$(VCRedistSource)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildBinPath)\..\..\..\VC\Redist\MSVC\v143\vc_redist.x64.exe'))</VCRedistSource>
+    <DefineConstants>$(DefineConstants);AppMsi=$(InstallerRoot)uYouWinInstaller\bin\Release\uYouWin Installer.msi;BAOutput=$(InstallerRoot)uYouWin.Bootstrapper.UI\bin\Release;VCRedistSource=$(VCRedistSource)</DefineConstants>
+  </PropertyGroup>
+  <Target Name="BuildReleaseChain" BeforeTargets="Compile">
+    <Error Condition="!Exists('$(VCRedistSource)')" Text="Install the VS2022 C++ tools or set VCRedistSource to Microsoft's vc_redist.x64.exe." />
+    <Exec Command="&quot;$(MSBuildBinPath)\MSBuild.exe&quot; &quot;$(InstallerRoot)uYouWinInstaller\uYouWinInstaller.wixproj&quot; /t:Build /p:Configuration=Release /p:Platform=x86 /nologo /v:minimal /nr:false" Timeout="28000" />
+    <Exec Command="&quot;$(MSBuildBinPath)\MSBuild.exe&quot; &quot;$(InstallerRoot)uYouWin.Bootstrapper.UI\uYouWin.Bootstrapper.UI.csproj&quot; /t:Build /p:Configuration=Release /p:Platform=AnyCPU /nologo /v:minimal /nr:false" Timeout="28000" />
+  </Target>
+</Project>

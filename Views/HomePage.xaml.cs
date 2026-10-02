@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +14,8 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using uYouWin.Models;
-using uYouWin.Services.Invidious;
+using uYouWin.Services.YouTube;
+using uYouWin.ViewModels;
 
 namespace uYouWin.Views
 {
@@ -24,69 +24,137 @@ namespace uYouWin.Views
     /// </summary>
     public partial class HomePage : Page
     {
+        private readonly HomePageViewModel _viewModel;
+        private bool _initialized;
+        private string _initialQuery;
+
         public HomePage()
         {
             InitializeComponent();
+
+            _viewModel = new HomePageViewModel();
+            DataContext = _viewModel;
+            _viewModel.Videos.CollectionChanged += (s, e) =>
+                ResultsListBox.ItemsSource = _viewModel.Videos;
+
+            ResultsListBox.ItemsSource = _viewModel.Videos;
+
+            Loaded += HomePage_Loaded;
         }
 
-        private async void TestInvidious_Click(object sender, RoutedEventArgs e)
+        public HomePage(string query) : this()
         {
+            _initialQuery = query;
+            QueryTextBox.Text = query;
+        }
+
+        private async void LoadMore_Click(object sender, RoutedEventArgs e)
+        {
+            await _viewModel.LoadMoreAsync();
+            ResultsHeaderTextBlock.Text = _viewModel.HeaderText;
+        }
+
+        private async void HomePage_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (_initialized) return;
+            _initialized = true;
+            if (!string.IsNullOrWhiteSpace(_initialQuery))
+            {
+                await RunSearchAsync();
+                return;
+            }
+            ResultsHeaderTextBlock.Text = _viewModel.HeaderText;
+
+            await _viewModel.InitializeAsync();
+
+            ResultsHeaderTextBlock.Text = _viewModel.HeaderText;
+        }
+
+        private async void RefreshButton_Click(object sender, RoutedEventArgs e)
+        {
+            await _viewModel.LoadRecommendationsAsync();
+
+            ResultsHeaderTextBlock.Text = _viewModel.HeaderText;
+        }
+
+        private async void SearchButton_Click(object sender, RoutedEventArgs e)
+        {
+            await RunSearchAsync();
+        }
+
+        private async void QueryTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                await RunSearchAsync();
+            }
+        }
+
+        private async Task RunSearchAsync()
+        {
+            string query = QueryTextBox.Text;
+
             try
             {
-                var httpClient = new HttpClient();
+                string videoId = Services.Cache.VisitedUrlCache.VideoIdFromUrl(query);
+                if (videoId != null)
+                {
+                    var video = Services.Cache.VisitedUrlCache.TryGet(videoId) ??
+                        await App.YouTubeApiService.GetVideoAsync(videoId, CancellationToken.None);
+                    if (video == null)
+                        throw new InvalidOperationException("Video unavailable.");
+                    NavigationService?.Navigate(new VideoPage(video));
+                    return;
+                }
+                await _viewModel.SearchAsync(query);
 
-                var client = new InvidiousClient(
-                    httpClient,
-                    "https://yt.chocolatemoo53.com/");
-
-                var service = new InvidiousService(client);
-
-                await service.SearchAsync("大家车言论", CancellationToken.None);
-
-                bool connected = await client.TestConnectionAsync(CancellationToken.None);
-
-                MessageBox.Show(
-                    connected ? "Instance connected successfully!" : "Failed to connect instance.");
+                ResultsHeaderTextBlock.Text = _viewModel.HeaderText;
             }
-            catch (InvidiousException ex)
+            catch (YouTubeApiKeyMissingException)
             {
                 MessageBox.Show(
-                    $"Invidious request failed:\n{ex.Message}\n\nStatus code: {ex.StatusCode}",
-                    "Invidious error",
+                    "No YouTube API key has been configured. " +
+                    "Please add one on the Settings page to search for videos.",
+                    "API key required",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (YouTubeApiException ex)
+            {
+                MessageBox.Show(
+                    "YouTube API request failed:\n" + ex.Message,
+                    "Search error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"Unexpected error while testing Invidious:\n{ex.Message}",
+                    "Unexpected error while searching:\n" + ex.Message,
                     "Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
         }
 
-        private void TestPlaybackButton_Click(object sender, RoutedEventArgs e)
+        private void ResultsListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            var testVideo = new Video
+            if (!(ResultsListBox.SelectedItem is Video video))
+                return;
+
+            if (NavigationService == null)
             {
-                Id = "QcCBm3yCeEY",
-                Title = "Windows on ARM 2026 Notebook Review",
-                YtUrl = "https://www.youtube.com/watch?v=QcCBm3yCeEY"
-            };
+                MessageBox.Show(
+                    "HomePage is not hosted in a navigable frame.",
+                    "Playback",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
 
-               if (NavigationService == null)
-             {
-                   MessageBox.Show(
-                        "Homepage is not hosted in a navigable frame.",
-                   "Playback Test",
-                          MessageBoxButton.OK,
-                   MessageBoxImage.Error);
+                return;
+            }
 
-                     return;
-                        }
-
-                        NavigationService.Navigate(new VideoPage(testVideo));
+            NavigationService.Navigate(
+                new VideoPage(video));
         }
     }
 }

@@ -4,15 +4,182 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:uYouWin.Views"
+      xmlns:ui="http://schemas.modernwpf.com/2019"
       mc:Ignorable="d" 
       d:DesignHeight="450" d:DesignWidth="800"
       Title="SettingsPage">
 
     <Grid Margin="32">
-        <TextBlock
-            Text="Settings"
-            Style="{DynamicResource HeaderTextBlockStyle}"
-            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-        />
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="600" HorizontalAlignment="Left">
+                <TextBlock
+                    Text="Settings"
+                    Style="{DynamicResource HeaderTextBlockStyle}"
+                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                />
+
+                <!-- Archive Import -->
+                <TextBlock
+                    Text="Archive Import"
+                    Margin="0,24,0,4"
+                    Style="{DynamicResource SubtitleTextBlockStyle}"
+                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                />
+
+                <TextBlock
+                    Text="Import data exported from your Google/YouTube takeout archive."
+                    TextWrapping="Wrap"
+                    Margin="0,0,0,12"
+                    Style="{DynamicResource TextBlockStyle}"
+                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                />
+
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <Button
+                        Content="Import Subscriptions"
+                        Width="180"
+                        Click="ImportSubscriptions_Click" />
+
+                    <Button
+                        Content="Import Watch History"
+                        Width="180"
+                        Margin="12,0,0,0"
+                        Click="ImportHistory_Click" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                    <Button
+                        Content="Import Playlists"
+                        Width="180"
+                        Click="ImportPlaylists_Click" />
+
+                    <Button
+                        Content="Import Search History"
+                        Width="180"
+                        Margin="12,0,0,0"
+                        Click="ImportSearchHistory_Click" />
+                </StackPanel>
+
+                <TextBlock
+                    x:Name="ArchiveImportStatusTextBlock"
+                    Margin="0,0,0,12"
+                    TextWrapping="Wrap"
+                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+
+                <!-- Recommendation Region -->
+                <TextBlock
+                    Text="Recommendation Region"
+                    Margin="0,12,0,4"
+                    Style="{DynamicResource SubtitleTextBlockStyle}"
+                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                />
+
+                <TextBlock
+                    Text="Choose the region used when fetching recommended videos."
+                    TextWrapping="Wrap"
+                    Margin="0,0,0,12"
+                    Style="{DynamicResource TextBlockStyle}"
+                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                />
+
+                <TextBox
+                    x:Name="RecommendationRegionTextBox"
+                    ui:ControlHelper.PlaceholderText="e.g. US, GB, TW" />
+
+                <!-- YouTube Data API -->
+                <TextBlock
+                    Text="YouTube Data API"
+                    Margin="0,24,0,4"
+                    Style="{DynamicResource SubtitleTextBlockStyle}"
+                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                />
+
+                <TextBlock
+                    Text="Configure your own YouTube Data API v3 key, or point this at a compatible third-party API. This is used for search, channel and playlist metadata."
+                    TextWrapping="Wrap"
+                    Margin="0,0,0,12"
+                    Style="{DynamicResource TextBlockStyle}"
+                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                />
+
+                <TextBlock Text="Provider name" Margin="0,0,0,4" />
+                <TextBox
+                    x:Name="ProviderNameTextBox"
+                    ui:ControlHelper.PlaceholderText="YouTube Data API v3" />
+
+                <TextBlock Text="API base URL" Margin="0,12,0,4" />
+                <TextBox
+                    x:Name="BaseUrlTextBox"
+                    ui:ControlHelper.PlaceholderText="https://www.googleapis.com/youtube/v3/" />
+
+                <TextBlock Text="API key" Margin="0,12,0,4" />
+                <PasswordBox
+                    x:Name="ApiKeyPasswordBox"
+                    ui:ControlHelper.PlaceholderText="Enter your API key" />
+
+                <CheckBox
+                    x:Name="EnabledCheckBox"
+                    Content="Enable YouTube Data API"
+                    Margin="0,12,0,0" />
+
+                <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                    <Button
+                        Content="Save"
+                        Width="100"
+                        Click="SaveButton_Click" />
+
+                    <Button
+                        Content="Test Connection"
+                        Width="140"
+                        Margin="12,0,0,0"
+                        Click="TestConnectionButton_Click" />
+
+                    <TextBlock
+                        x:Name="StatusTextBlock"
+                        Margin="12,0,0,0"
+                        VerticalAlignment="Center"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+
+                <!-- Playback Quality -->
+                <TextBlock
+                    Text="Playback Quality"
+                    Margin="0,24,0,4"
+                    Style="{DynamicResource SubtitleTextBlockStyle}"
+                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                />
+
+                <TextBlock Text="Video quality (maximum available)" Margin="0,0,0,4" />
+                <ComboBox x:Name="VideoQualityComboBox" SelectedValuePath="Tag" SelectedIndex="2">
+                    <ComboBoxItem Content="480p" Tag="480" />
+                    <ComboBoxItem Content="720p" Tag="720" />
+                    <ComboBoxItem Content="1080p" Tag="1080" />
+                    <ComboBoxItem Content="1440p" Tag="1440" />
+                    <ComboBoxItem Content="4k" Tag="2160" />
+                    <ComboBoxItem Content="Best" Tag="0" />
+                </ComboBox>
+
+                <TextBlock Text="Target audio bitrate (kbps)" Margin="0,12,0,4" />
+                <ComboBox x:Name="AudioQualityComboBox" SelectedValuePath="Tag" SelectedIndex="0">
+                    <ComboBoxItem Content="128kbps" Tag="128" />
+                    <ComboBoxItem Content="256kbps" Tag="256" />
+                </ComboBox>
+                <TextBlock Text="Uses the closest available compatible H.264/AAC formats; not every video offers every quality." TextWrapping="Wrap" Margin="0,8" />
+
+                <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                    <Button
+                        Content="Save Playback Settings"
+                        Width="180"
+                        Click="SavePlaybackSettingsButton_Click" />
+
+                    <TextBlock
+                        x:Name="PlaybackSettingsStatusTextBlock"
+                        Margin="12,0,0,0"
+                        VerticalAlignment="Center"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </Page>
